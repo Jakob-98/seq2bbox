@@ -9,7 +9,6 @@ from scipy import ndimage
 import cv2 as cv
 import PIL
 
-
 def getSequenceBGSub(seq_images):
     bgs = []
     fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
