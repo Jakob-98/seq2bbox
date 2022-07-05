@@ -1,56 +1,34 @@
 import cv2
-from cv2 import dilate
-from cv2 import threshold
 import numpy as np
+import json
+import shutil
+import os
+import glob
 from matplotlib import pyplot as plt
 from scipy import ndimage
 import cv2 as cv
 import PIL
-import time
-
-class config:
-    erodecount = 0
-    threshold = 25
-
-
-class Timer:
-   def __init__(self, printupdates = False):
-    self.starttime = time.time()
-    self.deltatime = time.time()
-    self.printupdates = printupdates
-
-   def updatetime(self, updatemsg: str):
-    if not self.printupdates: return
-    prevtime = self.deltatime
-    self.deltatime = time.time()
-    print(updatemsg, '%.2f' % float(1000*(self.deltatime - prevtime)), 'ms')
-   
-   def totalTime(self, updatemsg: str):
-    print(updatemsg, '%.2f' % float(1000*(time.time() - self.starttime)), 'ms')
-
-
-def erodeAndDilate(img, itcount):
-    erodeKernel = np.ones((5, 5), np.uint8)
-    dilateKernel = np.ones((3, 3), np.uint8)
-    for i in range(itcount):
-        img = cv2.erode(img, erodeKernel)
-        img = cv2.dilate(img, dilateKernel)
-    return img
 
 def getSequenceBGSub(seq_images):
     bgs = []
     fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
+    kernel = np.ones((5, 5), np.uint8)
+    kernel2 = np.ones((3, 3), np.uint8)
     for im in seq_images:
         backgroundsubbed = fgbg.apply(im)
-        # plt.imshow(backgroundsubbed)
-        # plt.show()
-        backgroundsubbed = erodeAndDilate(backgroundsubbed, config.erodecount)
+        backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+        backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)
+        backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+        backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)
         bgs.append(backgroundsubbed)
     # also sub the first image
     fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
     fgbg.apply(seq_images[-1])
     backgroundsubbed = fgbg.apply(seq_images[0])
-    backgroundsubbed = erodeAndDilate(backgroundsubbed, config.erodecount)
+    backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+    backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)
+    backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+    backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)    
     bgs[0] = backgroundsubbed
     return bgs
 
@@ -61,7 +39,7 @@ def getBox(src):
     # adjust brightness
     src_bright = cv.convertScaleAbs(src_gray, alpha = 255.0/src.max(), beta = 0)
     # apply threshold
-    threshold = config.threshold
+    threshold = 50
     _, img_thresh = cv.threshold(src_bright, threshold, 255, 0)
     # apply erode
     erosion_size = 7
@@ -75,7 +53,7 @@ def getBox(src):
     img_dilate = cv.dilate(img_erosion, element)
 
     # apply canny and find contours
-    threshold = config.threshold
+    threshold = 50
     canny_output = cv.Canny(img_dilate, threshold, threshold * 2)
     contours, _ = cv.findContours(canny_output, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
@@ -127,12 +105,9 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleF
 
 
 def generate_boxed_by_sequence(seq_paths: list, size: int):
-    timer = Timer()
     # seq_images = [cv2.imread(img) for img in seq_paths]
     seq_images = [np.array(PIL.Image.open(img)) for img in seq_paths]
-    timer.updatetime('loading time {} images:'.format(len(seq_paths)))
     bgs = getSequenceBGSub(seq_images)
-    timer.updatetime('getting backgrounds from sequence images:')
     imgs = []
     preds = [] # for testing the 'accuracy' of generating bounding boxes
     for i, bg in enumerate(bgs):
@@ -184,6 +159,4 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
             if 0 in reshaped_img.shape or reshaped_img is None: reshaped_img = img
         imgs.append(reshaped_img)
     imgs = [letterbox(im, size, auto=False)[0] for im in imgs]
-    timer.updatetime('booling and letterboxing images:')
-    timer.totalTime('Total time for processing {} images'.format(len(seq_paths)))
-    return imgs, bgs
+    return imgs

@@ -6,12 +6,13 @@ import pickle
 import os
 import cv2
 import immods.sequence
+import numpy as np
 
 # ... local utils import
 import utils
 
 from importlib import reload
-reload(utils)
+reload(immods.sequence)
 
 basepath = './examples'
 
@@ -24,11 +25,14 @@ with open(filepath, 'rb') as f:
 imgs = []
 for folder in os.listdir(basepath):
     fpath = Path(basepath) / folder
-    filepaths = []
+    filepaths, filenames = [], []
     for file in os.listdir(fpath):
         if file.endswith('.jpg'):
+            filenames.append(file)
             filepaths.append(fpath / file)
-    imgs = utils.generate_boxed_by_sequence(filepaths, 128)
-    raise
+    imgs, bgs = immods.sequence.generate_boxed_by_sequence(filepaths, 256)
+    for i, (im, fn) in enumerate(zip(imgs, filenames)): 
+        cv2.imwrite('./tmp/' + fn, np.array(im))
+        cv2.imwrite('./tmp/' + 'bg' + fn, np.array(bgs[i]))
 
 # %%
