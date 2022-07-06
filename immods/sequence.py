@@ -1,3 +1,4 @@
+from operator import xor
 import cv2
 from cv2 import dilate
 from cv2 import threshold
@@ -9,15 +10,21 @@ import PIL
 import time
 
 class config:
-    erodecount = 0
+    with open('C:\Projects\seq2bbox\config.txt') as f:
+        t, e = f.read().split(' ')
+    # erodecount = int(e)# 3
+    # threshold = int(t)#25
+    erodecount = 1
     threshold = 25
+    printTimer = False
 
 
 class Timer:
    def __init__(self, printupdates = False):
     self.starttime = time.time()
     self.deltatime = time.time()
-    self.printupdates = printupdates
+    self.printupdates = printupdates and config.printTimer
+    self.printtotal = config.printTimer
 
    def updatetime(self, updatemsg: str):
     if not self.printupdates: return
@@ -26,13 +33,14 @@ class Timer:
     print(updatemsg, '%.2f' % float(1000*(self.deltatime - prevtime)), 'ms')
    
    def totalTime(self, updatemsg: str):
+    if not self.printtotal: return
     print(updatemsg, '%.2f' % float(1000*(time.time() - self.starttime)), 'ms')
 
 
 def erodeAndDilate(img, itcount):
     erodeKernel = np.ones((5, 5), np.uint8)
     dilateKernel = np.ones((3, 3), np.uint8)
-    for i in range(itcount):
+    for _ in range(itcount):
         img = cv2.erode(img, erodeKernel)
         img = cv2.dilate(img, dilateKernel)
     return img
@@ -42,8 +50,6 @@ def getSequenceBGSub(seq_images):
     fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
     for im in seq_images:
         backgroundsubbed = fgbg.apply(im)
-        # plt.imshow(backgroundsubbed)
-        # plt.show()
         backgroundsubbed = erodeAndDilate(backgroundsubbed, config.erodecount)
         bgs.append(backgroundsubbed)
     # also sub the first image
@@ -186,4 +192,4 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
     imgs = [letterbox(im, size, auto=False)[0] for im in imgs]
     timer.updatetime('booling and letterboxing images:')
     timer.totalTime('Total time for processing {} images'.format(len(seq_paths)))
-    return imgs, bgs
+    return imgs, bgs, preds
