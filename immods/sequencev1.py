@@ -159,4 +159,4 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
             if 0 in reshaped_img.shape or reshaped_img is None: reshaped_img = img
         imgs.append(reshaped_img)
     imgs = [letterbox(im, size, auto=False)[0] for im in imgs]
-    return imgs
+    return imgs, None, None    

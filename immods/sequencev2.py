@@ -14,9 +14,9 @@ class config:
         t, e = f.read().split(' ')
     # erodecount = int(e)# 3
     # threshold = int(t)#25
-    erodecount = 1
-    threshold = 25
-    printTimer = False
+    erodecount = 2
+    threshold = 50
+    printTimer = True
 
 
 class Timer:
@@ -37,17 +37,31 @@ class Timer:
     print(updatemsg, '%.2f' % float(1000*(time.time() - self.starttime)), 'ms')
 
 
+# def erodeAndDilate(img, itcount):
+#     erodeKernel = np.ones((5, 5), np.uint8)
+#     dilateKernel = np.ones((3, 3), np.uint8)
+#     for _ in range(itcount):
+#         img = cv2.erode(img, erodeKernel)
+#         img = cv2.dilate(img, dilateKernel)
+#     return img
+
 def erodeAndDilate(img, itcount):
-    erodeKernel = np.ones((5, 5), np.uint8)
-    dilateKernel = np.ones((3, 3), np.uint8)
+    erosion_size = 3
+    erosion_type = cv.MORPH_ELLIPSE
+    dilatation_size = 5
+    dilatation_type = cv.MORPH_ELLIPSE
     for _ in range(itcount):
-        img = cv2.erode(img, erodeKernel)
-        img = cv2.dilate(img, dilateKernel)
+        element = cv.getStructuringElement(erosion_type, (2*erosion_size + 1, 2*erosion_size+1), (erosion_size, erosion_size))
+        img = cv2.erode(img, element)
+        element = cv.getStructuringElement(dilatation_type, (2*dilatation_size + 1, 2*dilatation_size+1), (dilatation_size, dilatation_size))
+        img = cv2.dilate(img, element)
     return img
+
 
 def getSequenceBGSub(seq_images):
     bgs = []
-    fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
+    fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True, varThreshold=)
+    print(type(fgbg))
     for im in seq_images:
         backgroundsubbed = fgbg.apply(im)
         backgroundsubbed = erodeAndDilate(backgroundsubbed, config.erodecount)

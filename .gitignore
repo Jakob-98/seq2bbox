@@ -4,3 +4,5 @@ data/
 .pk
 tmp/
 tmp - Copy/
+*.pyc
+tmp2/
