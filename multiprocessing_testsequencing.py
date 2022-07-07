@@ -8,7 +8,7 @@ from tqdm.contrib.concurrent import process_map
 import multiprocessing as mp
 import cv2
 from functools import partial
-import immods.sequence
+import immods.sequencev2
 import warnings
 import testresults
 import numpy as np
@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 # ... local utils import
 
 from importlib import reload
-reload(immods.sequence)
+reload(immods.sequencev2)
 
 basepath = Path('C:\Projects\wild\data\islands\images\images\\')
 
@@ -31,7 +31,7 @@ def _getfeats(res, sequence):
     ids = [i.get('image_id') for i in imgs_seq_lookup.get(sequence)]
     p = lambda x: str(Path(basepath) / x)
     paths = [p(x) for x in filenames]
-    imgs, _, preds = immods.sequence.generate_boxed_by_sequence(paths, 256)
+    imgs, _, preds = immods.sequencev2.generate_boxed_by_sequence(paths, 256)
 
     for im, i in zip(imgs, ids): 
         cv2.imwrite('./tmp2/' + i + '.jpg', np.array(im))
@@ -58,7 +58,7 @@ for ma in meta_anno:
 #                 testresults.main()
 # #
 if __name__ == '__main__':
-    print(immods.sequence.config.threshold, immods.sequence.config.erodecount) 
+    print(immods.sequencev2.config.threshold, immods.sequencev2.config.erodecount) 
     with mp.Manager() as manager:
         res = manager.list()
         process_map(partial(_getfeats, res), sequences[:50], max_workers=4, chunksize=2)

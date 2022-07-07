@@ -5,14 +5,14 @@ from pathlib import Path
 import pickle
 import os
 import cv2
-import immods.sequence
+import immods.sequencev2
 import numpy as np
 import immods.jplots
 # ... local utils import
 import utils
 
 from importlib import reload
-reload(immods.sequence)
+reload(immods.sequencev2)
 reload(immods.jplots)
 
 basepath = './examples'
@@ -31,7 +31,7 @@ for folder in os.listdir(basepath):
         if file.endswith('.jpg'):
             filenames.append(file)
             filepaths.append(fpath / file)
-    imgs, bgs, _ = immods.sequence.generate_boxed_by_sequence(filepaths, 256)
+    imgs, bgs, _ = immods.sequencev2.generate_boxed_by_sequence(filepaths, 256)
     immods.jplots.plotMultiImg(imgs)
     for i, (im, fn) in enumerate(zip(imgs, filenames)): 
         cv2.imwrite('./tmp/' + fn, np.array(im))
