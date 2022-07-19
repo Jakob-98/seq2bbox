@@ -106,7 +106,8 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleF
 
 def generate_boxed_by_sequence(seq_paths: list, size: int):
     # seq_images = [cv2.imread(img) for img in seq_paths]
-    seq_images = [np.array(PIL.Image.open(img)) for img in seq_paths]
+    # seq_images = [np.array(PIL.Image.open(img)) for img in seq_paths]
+    seq_images = seq_paths
     bgs = getSequenceBGSub(seq_images)
     imgs = []
     preds = [] # for testing the 'accuracy' of generating bounding boxes
