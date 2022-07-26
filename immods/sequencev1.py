@@ -107,7 +107,8 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleF
 def generate_boxed_by_sequence(seq_paths: list, size: int):
     # seq_images = [cv2.imread(img) for img in seq_paths]
     # seq_images = [np.array(PIL.Image.open(img)) for img in seq_paths]
-    seq_images = seq_paths
+    # print('OK... Seq images are pre-loaded before passing to generate_boxed...')
+    seq_images = seq_paths 
     bgs = getSequenceBGSub(seq_images)
     imgs = []
     preds = [] # for testing the 'accuracy' of generating bounding boxes
@@ -118,7 +119,6 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
         img_booled = img * boolbackground[..., np.newaxis]
         xmin, xmax, ymin, ymax = getBox(img_booled)
         if (xmax-xmin) < 10 or (ymax - ymin) < 10:
-            reshaped_img = img
             preds.append(0)
         else:
             preds.append(1)
@@ -157,7 +157,12 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
                     xmin += bottompad
                     xmax += toppad
             reshaped_img = img[ymin:ymax, xmin:xmax, :]
-            if 0 in reshaped_img.shape or reshaped_img is None: reshaped_img = img
-        imgs.append(reshaped_img)
-    imgs = [letterbox(im, size, auto=False)[0] for im in imgs]
+            if 0 in reshaped_img.shape or reshaped_img is None: 
+                reshaped_img = img
+            try:
+                img = letterbox(reshaped_img, (size, size), auto=False)[0]
+            except cv2.error:
+                print("Error resizing:", img.shape)
+                img = letterbox(img, (size, size), auto=False)[0]
+        imgs.append(img)
     return imgs, None, None    

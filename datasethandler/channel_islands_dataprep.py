@@ -1,3 +1,4 @@
+# %%
 import json
 from itertools import groupby
 from operator import itemgetter
@@ -5,12 +6,16 @@ import random
 import numpy as np
 from sklearn.model_selection import train_test_split
 import pickle
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 random.seed(42)
 np.random.seed(42)
 
 
 class config: 
+    save_pickles = False
+    run_eda = True
     metadata_path = "C:\Projects\wild\data\islands\metadata.json"
     pickle_path = 'C:\Projects\seq2bbox\data\pickle\islands\\'
 
@@ -48,7 +53,6 @@ meta_anno = []
 
 for k, v in groupby(sorted((d['annotations'] + d['images']), key=my_id), key=my_id):
     meta_anno.append({key:val for d in v for key, val in d.items()})
-
 
 
 # this logic helps with stratification by all categories in the sequence...
@@ -96,6 +100,86 @@ _, train20 = stratified_sequence_split(train100, 5)
 _, train10 = stratified_sequence_split(train100, 10)
 _, train5 = stratified_sequence_split(train100, 20)
 
-for name, dset in zip(['test', 'val', 'train100', 'test20', 'val20', 'train50', 'train20', 'train10', 'train5'], [test, val, train100, test20, val20, train50, train20, train10, train5]):
-    with open(config.pickle_path + name + '.pk', 'wb') as f:
-        pickle.dump(dset, f, protocol=pickle.HIGHEST_PROTOCOL)
+if config.save_pickles:
+    for name, dset in zip(['test', 'val', 'train100', 'test20', 'val20', 'train50', 'train20', 'train10', 'train5'], [test, val, train100, test20, val20, train50, train20, train10, train5]):
+        with open(config.pickle_path + name + '.pk', 'wb') as f:
+            pickle.dump(dset, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+###
+### EDA & Thesis Plotting
+### 
+import sys
+if not config.run_eda:
+    sys.exit('Finished running, exiting...')
+
+
+#%% 
+# EDA
+def show_values(axs, orient="v", space=.01):
+    def _single(ax):
+        if orient == "v":
+            for p in ax.patches:
+                _x = p.get_x() + p.get_width() / 2
+                _y = p.get_y() + p.get_height() + (p.get_height()*0.01)
+                value = '{:.0f}'.format(p.get_height())
+                ax.text(_x, _y, value, ha="center") 
+        elif orient == "h":
+            for p in ax.patches:
+                _x = p.get_x() + p.get_width() + float(space)
+                _y = p.get_y() + p.get_height() - (p.get_height()*0.5)
+                value = '{:.0f}'.format(p.get_width())
+                ax.text(_x, _y, value, ha="left")
+
+    if isinstance(axs, np.ndarray):
+        for idx, ax in np.ndenumerate(axs):
+            _single(ax)
+    else:
+        _single(axs)
+
+
+for setname, dataset in zip(['test', 'val', 'train100', 'test20', 'val20', 'train50', 'train20', 'train10', 'train5'], [test, val, train100, test20, val20, train50, train20, train10, train5]):
+    location_counter = {}
+    sequence_counter = {}
+    species_counter = {}
+
+    for img in dataset:
+        # location_counter[img.get('location')] = location_counter.get(img.get('location'), 0) + 1
+        # sequence_counter[img.get('seq_num_frames')] = sequence_counter.get(img.get('seq_num_frames'), 0) + 1
+        species_counter[img.get('category_id')] = species_counter.get(img.get('category_id'), 0) + 1
+
+    species_lookup = {i.get('id') : i.get('name') for i in d['categories']}
+
+    # replace humans by other in lookup:
+    species_lookup[1] = 'other'
+
+
+    species_named_counter = {species_lookup.get(k): v for k, v in species_counter.items()}
+
+    plt.figure(num=None, figsize=(10,8), dpi=80, facecolor='w', edgecolor='r')
+    y = list(species_named_counter.keys())
+    x = list(species_named_counter.values())
+    argx = np.argsort(x)[::-1]
+    x = np.array(x)[argx]
+    y = np.array(y)[argx]
+    plt.title("Channel islands class distribution of subset: " + setname + ". Total count: n=" + str(len(dataset)))
+    sns.set_context('paper')
+    sns.set_color_codes('muted')
+    p = sns.barplot(x = x, y = y, color='b')
+    show_values(p, "h", space=0)
+    plt.show() 
+
+# %%
+for img in meta_anno:
+    location_counter[img.get('location')] = location_counter.get(img.get('location'), 0) + 1
+location_counter = {k: v for k, v in sorted(location_counter.items(), key=lambda item: item[1], reverse=True)}
+
+# import pandas as pd
+# locs = pd.DataFrame.from_dict(location_counter, orient='index')
+# # %%
+# # save locs dataframe to textfile:
+# mycontent = locs.to_latex()
+# with open('../thesis_files/' + 'locs.tex', 'w') as f:
+#     f.write(mycontent)
+
+# %%

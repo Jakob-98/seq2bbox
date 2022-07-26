@@ -9,7 +9,7 @@ from scipy import ndimage
 import cv2 as cv
 import PIL
 import pickle
-from immods import colorhistslbp, labelgen, sequencev1, jtimer
+from immods import colorhistslbp, labelgen, sequencev1, jtimer, compression
 from pathlib import Path
 import multiprocessing as mp
 from tqdm.contrib.concurrent import process_map
@@ -21,56 +21,152 @@ warnings.filterwarnings("ignore")
 ## Configuration
 
 class config:
-    pickle_path = './val20.pk'
-    dataset_path = 'C:/Projects/wild/data/islands/images/images/'
-    image_path = "C:/temp/ispipeline/images/224xCropRGBval20/"
-    label_path = "C:/temp/ispipeline/labels/224xCropRGBval20/"
-    histlbp_path = "C:/temp/ispipeline/histlbp/224xCropRGBval20/"  
+    remove_existing=False
+    sequential_data = True
+    pickle_path = "C:\Projects\seq2bbox\data\pickle\islands\\val20.pk"
+    dataset_path = "C:\Projects\wild\data\islands\images\\images\\"
+    image_path = "C:\\temp\data_final\\islands\\images\\ISL224xSeqRGBVal20\\"
+    histlbp_path = "C:\\temp\data_final\\islands\\histlbp\\ISL224xSeqRGBVal20\\"
+    label_path = "C:\\temp\data_final\\islands\\labels\\ISL224xSeqRGBVal20\\"
+
+    # dataset_path = "C:\\temp\ENA_full\\"
+    # image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropRGBTrain5\\"
+    # label_path = "C:\\temp\data_final\\ENA\\labels\\ENA224xCropRGBTrain5\\"
+    # histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENA224xCropRGBTrain5\\"
+    # pickle_path = './val20.pk'
+    # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
+    # image_path = "C:/temp/ispipeline/images/224xCropRGBval20/"
+    # label_path = "C:/temp/ispipeline/labels/224xCropRGBval20/"
+    # histlbp_path = "C:/temp/ispipeline/histlbp/224xCropRGBval20/"  
     ## pickle_path = './train5.pk'
     # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
     # image_path = "C:/temp/ispipeline/images/224xSeqRGBTrain5/"
     # label_path = "C:/temp/ispipeline/labels/224xSeqRGBTrain5/"
     # histlbp_path = "C:/temp/ispipeline/histlbp/224xSeqRGBTrain5/"
-    generate_histlp = False
-    sequence_bboxer = False
+    generate_histlp = True
     generate_labels = True
     convert_grayscale = False
     wavelet_compress = False
     naive_compress = False
     resize = True
     image_size = 224
-    labelfix = True
-
     # multiprocessing
     chunksize = 8
     max_workers = 8
 
-# init timer and 'globals'
+class configWorking:
+    sequential_data = False
+    pickle_path = "C:\Projects\seq2bbox\data\pickle\ENA\\val.pk"
+    dataset_path = "C:\\temp\ENA_full\\"
+    image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropGWNval\\"
+    histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENA224xCropGWNval\\"
+    label_path = "C:\\temp\data_final\\ENA\\labels\\ENA224xCropGWNval\\"
 
+    # image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropRGBTrain5\\"
+    # label_path = "C:\\temp\data_final\\ENA\\labels\\ENA224xCropRGBTrain5\\"
+    # histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENA224xCropRGBTrain5\\"
+    # pickle_path = './val20.pk'
+    # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
+    # image_path = "C:/temp/ispipeline/images/224xCropRGBval20/"
+    # label_path = "C:/temp/ispipeline/labels/224xCropRGBval20/"
+    # histlbp_path = "C:/temp/ispipeline/histlbp/224xCropRGBval20/"  
+    ## pickle_path = './train5.pk'
+    # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
+    # image_path = "C:/temp/ispipeline/images/224xSeqRGBTrain5/"
+    # label_path = "C:/temp/ispipeline/labels/224xSeqRGBTrain5/"
+    # histlbp_path = "C:/temp/ispipeline/histlbp/224xSeqRGBTrain5/"
+    generate_histlp = True
+    generate_labels = True
+    convert_grayscale = True
+    wavelet_compress = True
+    naive_compress = True
+    resize = True
+    image_size = 224
+    # multiprocessing
+    chunksize = 8
+    max_workers = 8
+
+# create image, label and histlbp directories if they don't exist:
+for path in [config.image_path, config.label_path, config.histlbp_path]:
+    if not os.path.exists(path):
+        os.makedirs(path)
+    # delete contents of directories
+    if config.remove_existing:
+        for file in glob.glob(path + '*'):
+            os.remove(file)
+
+# init timer and 'globals'
 timer = jtimer.Timer(printupdates=False)
 filepath = config.pickle_path
 with open(filepath, 'rb') as f:
     meta_anno = pickle.load(f)
 
-sequences = sorted(list(set([i.get('seq_id') for i in meta_anno])))
-imgs_seq_lookup = {}
-for ma in meta_anno:
-    imgs_seq_lookup.setdefault(ma.get('seq_id','empty'),[]).append(ma)
-
-def hacky_labelfix(cats):
-        # replacing cat id 6 with 1. 
-    cats = [i if i!=0 else 6 for i in cats]
-    return cats
+if config.sequential_data:
+    sequences = sorted(list(set([i.get('seq_id') for i in meta_anno])))
+    imgs_seq_lookup = {}
+    for ma in meta_anno:
+        imgs_seq_lookup.setdefault(ma.get('seq_id','empty'),[]).append(ma)
 
 # main function in multiprocessor
+def _createFilesSingular(meta_anno_item):
+    # preparing useful vars
+    # originalFileNames = [i.get('file_name') for i in meta_anno_subset]
+    # baseFilePaths = [p(i) for i in originalFileNames]
+    # cats = [i.get('category_id') for i in meta_anno_subset]
+    # ids = [i.get('image_id') for i in meta_anno_subset]
+    # dims = [(i.get('width'), i.get('height')) for i in meta_anno_subset]
+    # bboxs = [i.get('bbox') for i in meta_anno_subset]
 
-def _createFiles(imagelist):
+    p = lambda x:(str(Path(config.dataset_path) / x))
+    baseFilePath = p(meta_anno_item.get('file_name'))
+    categoryId = meta_anno_item.get('category_id')
+    imageId = meta_anno_item.get('image_id')
+    dim = (meta_anno_item.get('width'), meta_anno_item.get('height'))
+    bb = meta_anno_item.get('bbox')
+
+    rawImage = np.array(PIL.Image.open(baseFilePath))
+
+    if config.generate_histlp:
+        result = colorhistslbp.getLpb(rawImage)
+        np.save(Path(config.histlbp_path) / f'{imageId}.npy', result, allow_pickle=False)
+
+
+    if config.resize:
+        resizedImage, ratio, pad = sequencev1.letterbox(rawImage, config.image_size, auto=False)
+
+        fpath = str(Path(config.image_path) / f'{imageId}.jpg')
+        if config.convert_grayscale:
+            resizedImage = compression.converGrayscale(resizedImage)
+            if config.wavelet_compress:
+                resizedImage = compression.waveletCompress(resizedImage)
+            if config.naive_compress:
+                resizedImage = compression.saveCompressed(fpath, resizedImage, 75)
+            else: 
+                cv.imwrite(fpath, resizedImage)
+        else: 
+            cv.imwrite(fpath, resizedImage)
+
+        # gen labels but fix the size of the bbox
+        if config.generate_labels:
+            bbox = np.array(bb) * ratio[0] # multiply by ratio of resized image #TODO this can cause error Nonetype and float
+            bbox[1] = bbox[1] + pad[1]
+            label = labelgen.generateSingleLabel(cat=categoryId, dimensions=(config.image_size, config.image_size), bbox=bbox)
+            with open(Path(config.label_path) / f'{imageId}.txt', 'w') as f:
+                f.write(label)
+
+    else: 
+        if config.generate_labels:
+            raise NotImplementedError
+
+
+
+
+def _createFilesSequential(imagelist):
     timer.updatetime('Init new sequence: ')
 
     # logic for single images
     if len(imagelist) == 1:
-        print('WARNING: single image found - sequential pipeline')
-        raise NotImplementedError
+            raise Exception('sequential_data flag is enabled - not supported for single images')
 
     # logic for sequential images
     else: 
@@ -81,8 +177,6 @@ def _createFiles(imagelist):
         baseFilePaths = [p(i) for i in originalFileNames]
 
         cats = [i.get('category_id') for i in imgs_seq_lookup.get(imagelist)] 
-
-        cats = hacky_labelfix(cats)
 
         ids = [i.get('image_id') for i in imgs_seq_lookup.get(imagelist)]
 
@@ -100,19 +194,16 @@ def _createFiles(imagelist):
                 #     f.write(result)
     
             if config.generate_labels: 
-                label = labelgen.generateLabel(categoryId)
+                label = labelgen.generateSeqLabel(categoryId)
                 with open(Path(config.label_path) / (imageId + '.txt'), 'w') as f:
                     f.write(label)
 
         timer.updatetime('generating lpb and label: ')
         
-        # generating sequenced images with bounding box if found if config.sequence_bboxer. 
-        if config.sequence_bboxer: 
-            sequencedImages, _, _ = sequencev1.generateSequence(loadedImages, cats, ids, config.image_size)
-            timer.updatetime('generating sequence: ')
-        elif config.resize: 
-            sequencedImages = [sequencev1.letterbox(im, config.image_size, auto=False)[0] for im in loadedImages]
-            timer.updatetime('resizing images: ')
+        # generating sequenced images with bounding box
+        sequencedImages, _, _ = sequencev1.generate_boxed_by_sequence(loadedImages, config.image_size)
+        timer.updatetime('generating sequence: ')
+
         
         # saving sequenced images
         for sequencedImage, imageId in zip(sequencedImages, ids):
@@ -130,5 +221,8 @@ def _createFiles(imagelist):
 
 if __name__ == '__main__':
     # _createFiles(sequences) #listunhashableerror
-    with mp.Manager() as manager: 
-        process_map(partial(_createFiles), sequences, max_workers = config.max_workers, chunksize = config.chunksize)
+    with mp.Manager() as manager:   
+        if config.sequential_data:
+            process_map(partial(_createFilesSequential), sequences, max_workers = config.max_workers, chunksize = config.chunksize)
+        else:
+            process_map(partial(_createFilesSingular), meta_anno, max_workers = config.max_workers, chunksize = config.chunksize)
