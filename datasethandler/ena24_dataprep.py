@@ -15,7 +15,7 @@ random.seed(42)
 np.random.seed(42)
 
 class config:
-    save_pickles = False
+    save_pickles = False  
     metadata_path = 'C:\Projects\wild\data\ENA24\ena24_public.json'
     pickle_path = 'C:\Projects\seq2bbox\data\pickle\ENA\\'
 

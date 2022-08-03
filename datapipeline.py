@@ -20,88 +20,41 @@ warnings.filterwarnings("ignore")
 
 ## Configuration
 
-class configTMP:
-    remove_existing = False
-    sequential_data = True 
-    pickle_path = "C:\Projects\seq2bbox\data\pickle\islands\\test20.pk"
-    dataset_path = "C:\Projects\wild\data\islands\images\\images\\"
-    image_path = "C:\\temp\data_final\\islands\\images\\ISL64xSeqRGBTest20\\"
-    histlbp_path = "C:\\temp\data_final\\islands\\histlbp\\ISL64xSeqRGBTest20\\"
-    label_path = "C:\\temp\data_final\\islands\\labels\\ISL64xSeqRGBTest20\\"
+import sys, os, argparse, yaml
 
-    # dataset_path = "C:\\temp\ENA_full\\"
-    # image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropRGBTrain5\\"
-    # label_path = "C:\\temp\data_final\\ENA\\labels\\ENA224xCropRGBTrain5\\"
-    # histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENA224xCropRGBTrain5\\"
-    # pickle_path = './val20.pk'
-    # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
-    # image_path = "C:/temp/ispipeline/images/224xCropRGBval20/"
-    # label_path = "C:/temp/ispipeline/labels/224xCropRGBval20/"
-    # histlbp_path = "C:/temp/ispipeline/histlbp/224xCropRGBval20/"  
-    ## pickle_path = './train5.pk'
-    # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
-    # image_path = "C:/temp/ispipeline/images/224xSeqRGBTrain5/"
-    # label_path = "C:/temp/ispipeline/labels/224xSeqRGBTrain5/"
-    # histlbp_path = "C:/temp/ispipeline/histlbp/224xSeqRGBTrain5/"
-    generate_histlp = False
-    generate_labels = True
-    convert_grayscale = False
-    wavelet_compress = False
-    naive_compress = False
-    resize = True
-    image_size = 64
-    # multiprocessing
-    chunksize = 8
-    max_workers = 8
+parser = argparse.ArgumentParser(description='Configure a jconfig')
+parser.add_argument('-c', '--config', help='Config .yaml file path', type=str, default='./config.yaml')
+args = parser.parse_args()
+
+# Load config file
+with open(args.config, 'r') as f:
+    configyaml = yaml.load(f, Loader=yaml.FullLoader)
 
 class config:
-    remove_existing= False
-    sequential_data = False
-    pickle_path = "C:\Projects\seq2bbox\data\pickle\ENA\\train100.pk"
-    dataset_path = "C:\\temp\ENA_full\\"
-    image_path = "C:\\temp\data_final\\ENA\\images\\ENAORIGxCropRGBTrain100\\"
-    histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENAORIGxCropRGBTrain100\\"
-    label_path = "C:\\temp\data_final\\ENA\\labels\\ENAORIGxCropRGBTrain100\\"
-
-    # pickle_path = "C:\Projects\seq2bbox\data\pickle\islands\\train5.pk"
-    # dataset_path = "C:\Projects\wild\data\islands\images\\images\\"
-    # image_path = "C:\\temp\data_final\\islands\\images\\ISL224xCropRGBTrain5\\"
-    # histlbp_path = "C:\\temp\data_final\\islands\\histlbp\\ISL224xCropRGBTrain5\\"
-    # label_path = "C:\\temp\data_final\\islands\\labels\\ISL224xCropRGBTrain5\\"
+    for key, value in configyaml.items():
+        locals()[key] = value
 
 
-    # image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropRGBTrain5\\"
-    # label_path = "C:\\temp\data_final\\ENA\\labels\\ENA224xCropRGBTrain5\\"
-    # histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENA224xCropRGBTrain5\\"
-    # pickle_path = './val20.pk'
-    # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
-    # image_path = "C:/temp/ispipeline/images/224xCropRGBval20/"
-    # label_path = "C:/temp/ispipeline/labels/224xCropRGBval20/"
-    # histlbp_path = "C:/temp/ispipeline/histlbp/224xCropRGBval20/"  
-    ## pickle_path = './train5.pk'
-    # dataset_path = 'C:/Projects/wild/data/islands/images/images/'
-    # image_path = "C:/temp/ispipeline/images/224xSeqRGBTrain5/"
-    # label_path = "C:/temp/ispipeline/labels/224xSeqRGBTrain5/"
-    # histlbp_path = "C:/temp/ispipeline/histlbp/224xSeqRGBTrain5/"
-    generate_histlp = False 
-    generate_labels = True
-    convert_grayscale = False
-    wavelet_compress = False
-    naive_compress = False 
-    resize = False 
-    image_size = 64 
-    # multiprocessing
-    chunksize = 8
-    max_workers = 8
+# class config:
+#     remove_existing= True 
+#     sequential_data = False
+#     pickle_path = "C:\Projects\seq2bbox\data\pickle\ENA\\val.pk"
+#     dataset_path = "C:\\temp\ENA_full\\"
+#     image_path = "C:\\temp\data_final\\ENA\\images\\ENA64xCropGNVal\\"
+#     histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENA64xCropGNVal\\"
+#     label_path = "C:\\temp\data_final\\ENA\\labels\\ENA64xCropGNVal\\"
+#     generate_histlp = False 
+#     generate_labels = True
+#     convert_grayscale = True
+#     wavelet_compress = False
+#     naive_compress = True 
+#     resize = True 
+#     image_size = 64 
+#     # multiprocessing
+#     chunksize = 8
+#     max_workers = 8
 
-# create image, label and histlbp directories if they don't exist:
-for path in [config.image_path, config.label_path, config.histlbp_path]:
-    if not os.path.exists(path):
-        os.makedirs(path)
-    # delete contents of directories
-    if config.remove_existing:
-        for file in glob.glob(path + '*'):
-            os.remove(file)
+
 
 # init timer and 'globals'
 timer = jtimer.Timer(printupdates=False)
@@ -257,6 +210,14 @@ def _createFilesSequential(imagelist):
 # multiprocessing
 
 if __name__ == '__main__':
+    # create image, label and histlbp directories if they don't exist:
+    for path in [config.image_path, config.label_path, config.histlbp_path]:
+        if not os.path.exists(path):
+            os.makedirs(path)
+        # delete contents of directories
+        if config.remove_existing:
+            for file in glob.glob(path + '*'):
+                os.remove(file)
     # _createFiles(sequences) #listunhashableerror
     with mp.Manager() as manager:   
         if config.sequential_data:
