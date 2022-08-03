@@ -174,6 +174,19 @@ for img in meta_anno:
     location_counter[img.get('location')] = location_counter.get(img.get('location'), 0) + 1
 location_counter = {k: v for k, v in sorted(location_counter.items(), key=lambda item: item[1], reverse=True)}
 
+#%%
+# count number of each class  in test20: 
+test20_classes = {}
+for img in test20:
+    test20_classes[img.get('category_id')] = test20_classes.get(img.get('category_id'), 0) + 1
+print(test20_classes)
+
+# now in val20:
+val20_classes = {}
+for img in val20:
+    val20_classes[img.get('category_id')] = val20_classes.get(img.get('category_id'), 0) + 1
+print(val20_classes)
+
 # import pandas as pd
 # locs = pd.DataFrame.from_dict(location_counter, orient='index')
 # # %%

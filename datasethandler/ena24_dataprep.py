@@ -22,7 +22,6 @@ class config:
 with open(config.metadata_path) as f:
     d = json.load(f)
 
-
 # changing the labels to remove human labels but keep [1,..., n] order
 d['categories'][-1]['id'] = 8
 for anno in d['annotations']:
@@ -40,13 +39,27 @@ meta_anno = []
 for k, v in groupby(sorted((d['annotations'] + d['images']), key=my_id), key=my_id):
     meta_anno.append({key:val for d in v for key, val in d.items()})
 
-# removing missing images
-missing_ids = set()
-for idx, image in enumerate(meta_anno):
-    if not image.get('category_id'):
-        missing_ids.add(image['image_id'])
-print('number of missing ids: {}'.format(len(missing_ids)))
-meta_anno = [img for img in meta_anno if img.get('image_id') not in missing_ids]
+
+
+# # removing missing images|| UPDATE: This does not work, and messes with label=0
+# missing_ids = set()
+# for idx, image in enumerate(meta_anno):
+#     if not image.get('category_id'):
+#         print(image.get('category_id'))
+#         missing_ids.add(image['image_id'])
+# print('number of missing ids: {}'.format(len(missing_ids)))
+# meta_anno = [img for img in meta_anno if img.get('image_id') not in missing_ids]
+
+#%%
+# count the number of images in each category:
+counts = {}
+for anno in meta_anno:
+    if anno.get('category_id') in counts:
+        counts[anno.get('category_id')] += 1
+    else:
+        counts[anno.get('category_id')] = 1
+print(counts)
+#%%
 
 # Generating subsets... 
 full_length = len(meta_anno)
@@ -95,14 +108,15 @@ def show_values(axs, orient="v", space=.01):
         _single(axs)
 
 
-for dataset, setname in zip(trainsubsets + [validate, test], ('train100', 'train50', 'train20', 'train10', 'train5', "val", "test")):
+# for dataset, setname in zip(meta_anno + trainsubsets + [validate, test], ('full_set', 'train100', 'train50', 'train20', 'train10', 'train5', "val", "test")):
+for dataset, setname in zip(trainsubsets + [validate, test, meta_anno], ('train100', 'train50', 'train20', 'train10', 'train5', "val", "test", "full_set")):
     location_counter = {}
     sequence_counter = {}
     species_counter = {}
 
+    print(type(dataset))
+
     for img in dataset:
-        location_counter[img.get('location')] = location_counter.get(img.get('location'), 0) + 1
-        sequence_counter[img.get('seq_num_frames')] = sequence_counter.get(img.get('seq_num_frames'), 0) + 1
         species_counter[img.get('category_id')] = species_counter.get(img.get('category_id'), 0) + 1
 
     species_lookup = {i.get('id') : i.get('name') for i in d['categories']}
@@ -120,4 +134,24 @@ for dataset, setname in zip(trainsubsets + [validate, test], ('train100', 'train
     p = sns.barplot(x = x, y = y, color='b')
     show_values(p, "h", space=0)
     plt.show() 
-# %%
+
+
+# # %%
+# # print val set label counter: 
+# val_counter = {}
+# for img in validate:
+#     val_counter[img.get('category_id')] = val_counter.get(img.get('category_id'), 0) + 1
+
+# # sort counter and print: 
+# val_counter = sorted(val_counter.items(), key=itemgetter(0), reverse=False)
+# print(val_counter)
+# # %%
+# val_counter == [(1, 30), (2, 31), (3, 21), (4, 29), (5, 34), (6, 72), (7, 28), (8, 89), (9, 14), (10, 30), (11, 41), (12, 34), (13, 29), (14, 42), (15, 6), (16, 70), (17, 92), (18, 52), (19, 48), (20, 33), (21, 33)]
+# # %%
+# # count number of birds (category 0) in d['annotations']:
+# count = 0
+# for img in d['annotations']:
+#     if img.get('category_id') == 9:
+#         count += 1
+# print(count)
+# # %%

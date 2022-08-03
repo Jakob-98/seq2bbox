@@ -120,6 +120,7 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
         xmin, xmax, ymin, ymax = getBox(img_booled)
         if (xmax-xmin) < 10 or (ymax - ymin) < 10:
             preds.append(0)
+            img = letterbox(img, (size, size), auto=False)[0]
         else:
             preds.append(1)
             xmin, xmax = max(xmin-15, 1), min(xmax+15, width)

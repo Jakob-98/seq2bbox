@@ -1,0 +1,28 @@
+path: /home/serlierj/datasets/ENA/   # dataset root dir
+train: images/ENA640xCropRGBTest # train images (relative to 'path') 128 images
+val: images/ENA640xCropRGBTest  # val images (relative to 'path') 128 images
+test: images/ENA640xCropRGBTest
+
+nc: 22
+names: ['Bird',
+ 'Eastern Gray Squirrel',
+ 'Eastern Chipmunk',
+ 'Woodchuck',
+ 'Wild Turkey',
+ 'White_Tailed_Deer',
+ 'Virginia Opossum',
+ 'Eastern Cottontail',
+ 'American Black Bear',
+ 'Vehicle',
+ 'Striped Skunk',
+ 'Red Fox',
+ 'Eastern Fox Squirrel',
+ 'Northern Raccoon',
+ 'Grey Fox',
+ 'Horse',
+ 'Dog',
+ 'American Crow',
+ 'Chicken',
+ 'Domestic Cat',
+ 'Coyote',
+ 'Bobcat']

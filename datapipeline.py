@@ -20,14 +20,14 @@ warnings.filterwarnings("ignore")
 
 ## Configuration
 
-class config:
-    remove_existing=False
-    sequential_data = True
-    pickle_path = "C:\Projects\seq2bbox\data\pickle\islands\\val20.pk"
+class configTMP:
+    remove_existing = False
+    sequential_data = True 
+    pickle_path = "C:\Projects\seq2bbox\data\pickle\islands\\test20.pk"
     dataset_path = "C:\Projects\wild\data\islands\images\\images\\"
-    image_path = "C:\\temp\data_final\\islands\\images\\ISL224xSeqRGBVal20\\"
-    histlbp_path = "C:\\temp\data_final\\islands\\histlbp\\ISL224xSeqRGBVal20\\"
-    label_path = "C:\\temp\data_final\\islands\\labels\\ISL224xSeqRGBVal20\\"
+    image_path = "C:\\temp\data_final\\islands\\images\\ISL64xSeqRGBTest20\\"
+    histlbp_path = "C:\\temp\data_final\\islands\\histlbp\\ISL64xSeqRGBTest20\\"
+    label_path = "C:\\temp\data_final\\islands\\labels\\ISL64xSeqRGBTest20\\"
 
     # dataset_path = "C:\\temp\ENA_full\\"
     # image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropRGBTrain5\\"
@@ -43,24 +43,32 @@ class config:
     # image_path = "C:/temp/ispipeline/images/224xSeqRGBTrain5/"
     # label_path = "C:/temp/ispipeline/labels/224xSeqRGBTrain5/"
     # histlbp_path = "C:/temp/ispipeline/histlbp/224xSeqRGBTrain5/"
-    generate_histlp = True
+    generate_histlp = False
     generate_labels = True
     convert_grayscale = False
     wavelet_compress = False
     naive_compress = False
     resize = True
-    image_size = 224
+    image_size = 64
     # multiprocessing
     chunksize = 8
     max_workers = 8
 
-class configWorking:
+class config:
+    remove_existing= False
     sequential_data = False
-    pickle_path = "C:\Projects\seq2bbox\data\pickle\ENA\\val.pk"
+    pickle_path = "C:\Projects\seq2bbox\data\pickle\ENA\\train100.pk"
     dataset_path = "C:\\temp\ENA_full\\"
-    image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropGWNval\\"
-    histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENA224xCropGWNval\\"
-    label_path = "C:\\temp\data_final\\ENA\\labels\\ENA224xCropGWNval\\"
+    image_path = "C:\\temp\data_final\\ENA\\images\\ENAORIGxCropRGBTrain100\\"
+    histlbp_path = "C:\\temp\data_final\\ENA\\histlbp\\ENAORIGxCropRGBTrain100\\"
+    label_path = "C:\\temp\data_final\\ENA\\labels\\ENAORIGxCropRGBTrain100\\"
+
+    # pickle_path = "C:\Projects\seq2bbox\data\pickle\islands\\train5.pk"
+    # dataset_path = "C:\Projects\wild\data\islands\images\\images\\"
+    # image_path = "C:\\temp\data_final\\islands\\images\\ISL224xCropRGBTrain5\\"
+    # histlbp_path = "C:\\temp\data_final\\islands\\histlbp\\ISL224xCropRGBTrain5\\"
+    # label_path = "C:\\temp\data_final\\islands\\labels\\ISL224xCropRGBTrain5\\"
+
 
     # image_path = "C:\\temp\data_final\\ENA\\images\\ENA224xCropRGBTrain5\\"
     # label_path = "C:\\temp\data_final\\ENA\\labels\\ENA224xCropRGBTrain5\\"
@@ -75,13 +83,13 @@ class configWorking:
     # image_path = "C:/temp/ispipeline/images/224xSeqRGBTrain5/"
     # label_path = "C:/temp/ispipeline/labels/224xSeqRGBTrain5/"
     # histlbp_path = "C:/temp/ispipeline/histlbp/224xSeqRGBTrain5/"
-    generate_histlp = True
+    generate_histlp = False 
     generate_labels = True
-    convert_grayscale = True
-    wavelet_compress = True
-    naive_compress = True
-    resize = True
-    image_size = 224
+    convert_grayscale = False
+    wavelet_compress = False
+    naive_compress = False 
+    resize = False 
+    image_size = 64 
     # multiprocessing
     chunksize = 8
     max_workers = 8
@@ -124,11 +132,16 @@ def _createFilesSingular(meta_anno_item):
     dim = (meta_anno_item.get('width'), meta_anno_item.get('height'))
     bb = meta_anno_item.get('bbox')
 
-    rawImage = np.array(PIL.Image.open(baseFilePath))
+    try:
+        rawImage = np.array(PIL.Image.open(baseFilePath))
+    except OSError:
+        print("Error opening file: " + baseFilePath)
+        return
 
     if config.generate_histlp:
         result = colorhistslbp.getLpb(rawImage)
         np.save(Path(config.histlbp_path) / f'{imageId}.npy', result, allow_pickle=False)
+
 
 
     if config.resize:
@@ -148,15 +161,35 @@ def _createFilesSingular(meta_anno_item):
 
         # gen labels but fix the size of the bbox
         if config.generate_labels:
-            bbox = np.array(bb) * ratio[0] # multiply by ratio of resized image #TODO this can cause error Nonetype and float
-            bbox[1] = bbox[1] + pad[1]
+            try:
+                bbox = np.array(bb) * ratio[0] # multiply by ratio of resized image 
+                bbox[1] = bbox[1] + pad[1]
+            except TypeError:
+                print('no bbox, skipping...')
+                bbox = np.array([0.5,0.5,1,1])
             label = labelgen.generateSingleLabel(cat=categoryId, dimensions=(config.image_size, config.image_size), bbox=bbox)
             with open(Path(config.label_path) / f'{imageId}.txt', 'w') as f:
                 f.write(label)
 
     else: 
         if config.generate_labels:
-            raise NotImplementedError
+            # check if bbox exists: 
+            if bb is not None:
+                bbox = np.array(bb)
+                label = labelgen.generateSingleLabel(cat=categoryId, dimensions=dim, bbox=bbox)
+                with open(Path(config.label_path) / f'{imageId}.txt', 'w') as f:
+                    f.write(label)
+            else: 
+                print('no bbox, skipping...')
+                bbox = np.array([0.5,0.5,1,1])
+                label = labelgen.generateSingleLabel(cat=categoryId, dimensions=dim, bbox=bbox)
+                with open(Path(config.label_path) / f'{imageId}.txt', 'w') as f:
+                    f.write(label)
+
+        # save image
+        fpath = str(Path(config.image_path) / f'{imageId}.jpg')
+        # save raw image:
+        cv.imwrite(fpath, rawImage)
 
 
 
@@ -183,7 +216,11 @@ def _createFilesSequential(imagelist):
         loadedImages = []
         # generating color histograms/LBP, labels. 
         for baseFilePath, categoryId, imageId in zip(baseFilePaths, cats, ids):
-            rawImage = np.array(PIL.Image.open(baseFilePath))
+            try:
+                rawImage = np.array(PIL.Image.open(baseFilePath))
+            except OSError:
+                print("Error opening file: " + baseFilePath)
+                return
             loadedImages.append(rawImage)
 
             if config.generate_histlp: 
