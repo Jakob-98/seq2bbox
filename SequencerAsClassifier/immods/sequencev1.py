@@ -1,76 +1,34 @@
-from operator import xor
 import cv2
-from cv2 import dilate
-from cv2 import threshold
 import numpy as np
+import json
+import shutil
+import os
+import glob
 from matplotlib import pyplot as plt
 from scipy import ndimage
 import cv2 as cv
 import PIL
-import time
-
-class config:
-    with open('C:\Projects\seq2bbox\config.txt') as f:
-        t, e = f.read().split(' ')
-    # erodecount = int(e)# 3
-    # threshold = int(t)#25
-    erodecount = 2
-    threshold = 50
-    printTimer = True
-
-
-class Timer:
-   def __init__(self, printupdates = False):
-    self.starttime = time.time()
-    self.deltatime = time.time()
-    self.printupdates = printupdates and config.printTimer
-    self.printtotal = config.printTimer
-
-   def updatetime(self, updatemsg: str):
-    if not self.printupdates: return
-    prevtime = self.deltatime
-    self.deltatime = time.time()
-    print(updatemsg, '%.2f' % float(1000*(self.deltatime - prevtime)), 'ms')
-   
-   def totalTime(self, updatemsg: str):
-    if not self.printtotal: return
-    print(updatemsg, '%.2f' % float(1000*(time.time() - self.starttime)), 'ms')
-
-
-# def erodeAndDilate(img, itcount):
-#     erodeKernel = np.ones((5, 5), np.uint8)
-#     dilateKernel = np.ones((3, 3), np.uint8)
-#     for _ in range(itcount):
-#         img = cv2.erode(img, erodeKernel)
-#         img = cv2.dilate(img, dilateKernel)
-#     return img
-
-def erodeAndDilate(img, itcount):
-    erosion_size = 3
-    erosion_type = cv.MORPH_ELLIPSE
-    dilatation_size = 5
-    dilatation_type = cv.MORPH_ELLIPSE
-    for _ in range(itcount):
-        element = cv.getStructuringElement(erosion_type, (2*erosion_size + 1, 2*erosion_size+1), (erosion_size, erosion_size))
-        img = cv2.erode(img, element)
-        element = cv.getStructuringElement(dilatation_type, (2*dilatation_size + 1, 2*dilatation_size+1), (dilatation_size, dilatation_size))
-        img = cv2.dilate(img, element)
-    return img
-
 
 def getSequenceBGSub(seq_images):
     bgs = []
-    fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True, varThreshold=50)
-    print(type(fgbg))
+    fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
+    kernel = np.ones((5, 5), np.uint8)
+    kernel2 = np.ones((3, 3), np.uint8)
     for im in seq_images:
         backgroundsubbed = fgbg.apply(im)
-        backgroundsubbed = erodeAndDilate(backgroundsubbed, config.erodecount)
+        backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+        backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)
+        backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+        backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)
         bgs.append(backgroundsubbed)
     # also sub the first image
     fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
     fgbg.apply(seq_images[-1])
     backgroundsubbed = fgbg.apply(seq_images[0])
-    backgroundsubbed = erodeAndDilate(backgroundsubbed, config.erodecount)
+    backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+    backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)
+    backgroundsubbed = cv2.erode(backgroundsubbed, kernel)
+    backgroundsubbed = cv2.dilate(backgroundsubbed, kernel2)    
     bgs[0] = backgroundsubbed
     return bgs
 
@@ -81,7 +39,7 @@ def getBox(src):
     # adjust brightness
     src_bright = cv.convertScaleAbs(src_gray, alpha = 255.0/src.max(), beta = 0)
     # apply threshold
-    threshold = config.threshold
+    threshold = 50
     _, img_thresh = cv.threshold(src_bright, threshold, 255, 0)
     # apply erode
     erosion_size = 7
@@ -95,7 +53,7 @@ def getBox(src):
     img_dilate = cv.dilate(img_erosion, element)
 
     # apply canny and find contours
-    threshold = config.threshold
+    threshold = 50
     canny_output = cv.Canny(img_dilate, threshold, threshold * 2)
     contours, _ = cv.findContours(canny_output, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
@@ -147,12 +105,11 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleF
 
 
 def generate_boxed_by_sequence(seq_paths: list, size: int):
-    timer = Timer()
     # seq_images = [cv2.imread(img) for img in seq_paths]
-    seq_images = [np.array(PIL.Image.open(img)) for img in seq_paths]
-    timer.updatetime('loading time {} images:'.format(len(seq_paths)))
+    # seq_images = [np.array(PIL.Image.open(img)) for img in seq_paths]
+    # print('OK... Seq images are pre-loaded before passing to generate_boxed...')
+    seq_images = seq_paths 
     bgs = getSequenceBGSub(seq_images)
-    timer.updatetime('getting backgrounds from sequence images:')
     imgs = []
     preds = [] # for testing the 'accuracy' of generating bounding boxes
     for i, bg in enumerate(bgs):
@@ -162,8 +119,8 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
         img_booled = img * boolbackground[..., np.newaxis]
         xmin, xmax, ymin, ymax = getBox(img_booled)
         if (xmax-xmin) < 10 or (ymax - ymin) < 10:
-            reshaped_img = img
             preds.append(0)
+            img = letterbox(img, (size, size), auto=False)[0]
         else:
             preds.append(1)
             xmin, xmax = max(xmin-15, 1), min(xmax+15, width)
@@ -201,9 +158,12 @@ def generate_boxed_by_sequence(seq_paths: list, size: int):
                     xmin += bottompad
                     xmax += toppad
             reshaped_img = img[ymin:ymax, xmin:xmax, :]
-            if 0 in reshaped_img.shape or reshaped_img is None: reshaped_img = img
-        imgs.append(reshaped_img)
-    imgs = [letterbox(im, size, auto=False)[0] for im in imgs]
-    timer.updatetime('booling and letterboxing images:')
-    timer.totalTime('Total time for processing {} images'.format(len(seq_paths)))
-    return imgs, bgs, preds
+            if 0 in reshaped_img.shape or reshaped_img is None: 
+                reshaped_img = img
+            try:
+                img = letterbox(reshaped_img, (size, size), auto=False)[0]
+            except cv2.error:
+                print("Error resizing:", img.shape)
+                img = letterbox(img, (size, size), auto=False)[0]
+        imgs.append(img)
+    return imgs, None, None    

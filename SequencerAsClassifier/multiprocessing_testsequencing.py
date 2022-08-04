@@ -22,7 +22,7 @@ reload(immods.sequencev2)
 basepath = Path('C:\Projects\wild\data\islands\images\images\\')
 
 # %%
-filepath = './val20.pk'
+filepath = 'C:\Projects\seq2bbox\SequencerAsClassifier\\test20.pk'
 with open(filepath, 'rb') as f:
     meta_anno = pickle.load(f)
 # %%
@@ -44,27 +44,25 @@ imgs_seq_lookup = {}
 for ma in meta_anno:
     imgs_seq_lookup.setdefault(ma.get('seq_id','empty'),[]).append(ma)
 
-# if __name__ == '__main__':
-#     for thresh in (25, 50, 75, 100, 125):
-#         for erodecount in (1, 2, 3, 4):   
-#             with open('C:\Projects\seq2bbox\config.txt', 'w') as f:
-#                 f.write('{} {}'.format(thresh, erodecount))
-#             print('threshold, erodecount:', thresh, erodecount) 
-#             with mp.Manager() as manager:
-#                 res = manager.list()
-#                 process_map(partial(_getfeats, res), sequences[:50], max_workers=4, chunksize=2)
-#                 with open('./result.pkl', 'wb') as f: 
-#                     pickle.dump(list(res), f)
-#                 testresults.main()
-# #
 if __name__ == '__main__':
-    print(immods.sequencev2.config.threshold, immods.sequencev2.config.erodecount) 
+    # for thresh in (50, 75):#, 50, 75, 100, 125):
+    #     for erodecount in (1, 2):#, 2, 3, 4):   
+    print('threshold, erodecount:', 50, 2) 
     with mp.Manager() as manager:
         res = manager.list()
         process_map(partial(_getfeats, res), sequences[:50], max_workers=4, chunksize=2)
         with open('./result.pkl', 'wb') as f: 
             pickle.dump(list(res), f)
         testresults.main()
+# #
+# if __name__ == '__main__':
+#     print(immods.sequencev2.config.threshold, immods.sequencev2.config.erodecount) 
+#     with mp.Manager() as manager:
+#         res = manager.list()
+#         process_map(partial(_getfeats, res), sequences[:50], max_workers=4, chunksize=2)
+#         with open('./result.pkl', 'wb') as f: 
+#             pickle.dump(list(res), f)
+#         testresults.main()
 # %%
 
 

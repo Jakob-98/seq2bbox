@@ -9,17 +9,17 @@ import cv2
 from functools import partial
 
 # ... local utils import
-import utils
+# import utils
 
 from importlib import reload
-reload(utils)
+# reload(utils)
 # %%
 
-def main():
-    filepath = './val20.pk'
+def main(): 
+    filepath = "C:\Projects\seq2bbox\SequencerAsClassifier\\test20.pk"
     with open(filepath, 'rb') as f:
         meta_anno = pickle.load(f)
-    with open('./result.pkl', 'rb') as f:
+    with open("C:\Projects\seq2bbox\SequencerAsClassifier\\result.pkl", 'rb') as f:
         res = pickle.load(f)
 
     #%%
@@ -37,7 +37,7 @@ def main():
     tp, fp, tn, fn = 0, 0, 0, 0
     # %%
     i = 0
-    counter = {}
+    counter = TP ()
     for seq in res:
         for im in seq:
             i+=1 

@@ -10,13 +10,13 @@ import PIL
 import time
 
 class config:
-    with open('C:\Projects\seq2bbox\config.txt') as f:
-        t, e = f.read().split(' ')
+    # with open('C:\Projects\seq2bbox\config.txt') as f:
+    #     t, e = f.read().split(' ')
     # erodecount = int(e)# 3
     # threshold = int(t)#25
     erodecount = 2
     threshold = 50
-    printTimer = True
+    printTimer = False
 
 
 class Timer:
@@ -61,7 +61,7 @@ def erodeAndDilate(img, itcount):
 def getSequenceBGSub(seq_images):
     bgs = []
     fgbg = cv2.createBackgroundSubtractorMOG2(detectShadows=True, varThreshold=50)
-    print(type(fgbg))
+    # print(type(fgbg))
     for im in seq_images:
         backgroundsubbed = fgbg.apply(im)
         backgroundsubbed = erodeAndDilate(backgroundsubbed, config.erodecount)
